@@ -10,6 +10,8 @@ import Loader from "../../components/loader/Loader";
 import Layout from '../../components/layout/Layout';
 import NewLoader from "../../components/loader/NewLoader";
 import emailjs from "@emailjs/browser";
+import axios from "axios";
+import { BASE_URL } from "../../helper";
 
 const Signup = () => {
     const context = useContext(myContext);
@@ -21,216 +23,184 @@ const Signup = () => {
         mobile: "",
         email: "",
         password: "",
-        address: "",
-        landmark: "",
-        pincode: "",
-        city: "",
-        state: "",
-        country: "",
         role: "user"
     });
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [verificationCode, setVerificationCode] = useState("");
+    const [userInputCode, setUserInputCode] = useState("");
+
+    const validateEmail = (email) => /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$/.test(email);
+    const validateMobile = (mobile) => /^\d{10}$/.test(mobile);
+    const validatePassword = (password) =>
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/.test(password);
 
     const userSignupFunction = async () => {
-        const { name, mobile, email, password, address, pincode, city, state, country } = userSignup;
-        if (name === "" || mobile === "" || email === "" || password === "" || address === "" || pincode === "" || city === "" || state === "" || country === "") {
-            toast.error("All Fields are required except Landmark");
+        setLoading(true);
+        const { name, mobile, email, password } = userSignup;
+
+        if (!name || !mobile || !email || !password) {
+            setLoading(false);
+            toast.error("All fields are required.");
             return;
         }
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        // setLoading(true);
+
+        if (!validateEmail(email)) {
+            setLoading(false);
+            toast.error("Invalid email address. Use @gmail.com, @yahoo.com, or @outlook.com domains.");
+            return;
+        }
+
+        if (!validateMobile(mobile)) {
+            setLoading(false);
+            toast.error("Mobile number must be exactly 10 digits.");
+            return;
+        }
+
+        if (!validatePassword(password)) {
+            setLoading(false);
+            toast.error("Password must meet security requirements.");
+            return;
+        }
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        setVerificationCode(code);
+
         try {
+            setLoading(true);
             await emailjs.send("service_nxpm74r", "template_6paeh9u", {
                 to_name: name,
                 to_email: email,
-                message: verificationCode,
+                message: code,
             }, "AX5QPEWUDd7UZrPe9");
 
             toast.success("Verification code sent to your email.");
-            // Prompt user to enter the verification code
-            const userInputCode = prompt("Enter the verification code sent to your email:");
-
-            if (userInputCode !== verificationCode) {
-                toast.error("Invalid verification code. Please try again.");
-                return;
-            }
-
-            setLoading(true);
-            const users = await createUserWithEmailAndPassword(auth, email, password);
-
-            const user = {
-                name,
-                mobile,
-                email: users.user.email,
-                uid: users.user.uid,
-                address,
-                landmark: userSignup.landmark,
-                pincode,
-                city,
-                state,
-                country,
-                role: userSignup.role,
-                time: Timestamp.now(),
-                date: new Date().toLocaleString("en-US", {
-                    month: "short",
-                    day: "2-digit",
-                    year: "numeric",
-                })
-            };
-
-            const userReference = collection(fireDB, "user");
-            await addDoc(userReference, user);
-
-            setUserSignup({
-                name: "",
-                mobile: "",
-                email: "",
-                password: "",
-                address: "",
-                landmark: "",
-                pincode: "",
-                city: "",
-                state: "",
-                country: "",
-                role: "user"
-            });
-
-            toast.success("Signup Successfully");
-            setLoading(false);
-            navigate('/userlogin');
+            setIsModalOpen(true);
         } catch (error) {
-            console.log(error);
             setLoading(false);
+            toast.error("Failed to send verification email.");
         }
-    }
+    };
+
+    const handleVerifyCode = async () => {
+        if (userInputCode === verificationCode) {
+            try {
+                setIsModalOpen(false);
+                setLoading(true);
+
+                // const users = await createUserWithEmailAndPassword(auth, userSignup.email, userSignup.password);
+                const response = await axios.post(`${BASE_URL}/user/createUser`, userSignup);
+                if(response.data.success){
+                    toast.success("Signup Successfully");
+                    setLoading(false);
+                    setIsModalOpen(false);
+                    navigate('/userlogin');    
+                }
+                else{
+                    setLoading(false);
+                    setIsModalOpen(false);
+                    toast.error('Error in Signing Up!. Please Try Again')
+                }
+                
+            } catch (err) {
+                setLoading(false);
+                toast.error("An error occurred during signup.");
+                console.log(err);
+            }
+            finally {
+                setVerificationCode("");
+                setUserInputCode("");
+                setUserSignup({
+                    name: "",
+                    mobile: "",
+                    email: "",
+                    password: "",
+                    role: "user"
+                });
+            }
+        } else {
+            setLoading(false);
+            toast.error("Invalid verification code. Please try again.");
+        }
+    };
 
     return (
         <Layout>
             <div className='flex justify-center items-center min-h-screen relative'>
-                {/* Background Images */}
                 <div className="absolute inset-0 bg-[url('../img/bg-image-1.jpg')] bg-cover bg-center "></div>
-                {loading && <Loader />}
+                {/* {loading && <Loader />} */}
 
-                {/* Signup Form */}
                 <div className="relative z-10 bg-eda72f px-6 py-8 border border-gray-100 rounded-xl shadow-md w-full max-w-lg mx-4 my-16">
-                    {/* Top Heading */}
-                    <div className="mb-5">
-                        <h2 className='text-center text-4xl font-bold'>Signup</h2>
-                    </div>
+                    <h2 className='text-center text-4xl font-bold mb-5'>Signup</h2>
 
-                    {/* Form Fields */}
-                    <div className="grid grid-cols-1 gap-4">
-                        {/* Full Name */}
-                        <input
-                            type="text"
-                            placeholder='Full Name'
-                            value={userSignup.name}
-                            onChange={(e) => setUserSignup({ ...userSignup, name: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
+                    <input
+                        type="text"
+                        placeholder='Full Name'
+                        value={userSignup.name}
+                        onChange={(e) => setUserSignup({ ...userSignup, name: e.target.value })}
+                        className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500 mb-4'
+                    />
+                    <input
+                        type="text"
+                        placeholder='Mobile Number'
+                        value={userSignup.mobile}
+                        onChange={(e) => setUserSignup({ ...userSignup, mobile: e.target.value })}
+                        className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500 mb-4'
+                    />
+                    <input
+                        type="email"
+                        placeholder='Email Address'
+                        value={userSignup.email}
+                        onChange={(e) => setUserSignup({ ...userSignup, email: e.target.value })}
+                        className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500 mb-4'
+                    />
+                    <input
+                        type="password"
+                        placeholder='Password'
+                        value={userSignup.password}
+                        onChange={(e) => setUserSignup({ ...userSignup, password: e.target.value })}
+                        className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500 mb-4'
+                    />
 
-                        {/* Mobile Number */}
-                        <input
-                            type="text"
-                            placeholder='Mobile Number'
-                            value={userSignup.mobile}
-                            onChange={(e) => setUserSignup({ ...userSignup, mobile: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* Email Address */}
-                        <input
-                            type="email"
-                            placeholder='Email Address'
-                            value={userSignup.email}
-                            onChange={(e) => setUserSignup({ ...userSignup, email: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* Password */}
-                        <input
-                            type="password"
-                            placeholder='Password'
-                            value={userSignup.password}
-                            onChange={(e) => setUserSignup({ ...userSignup, password: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* Complete Address */}
-                        <input
-                            type="text"
-                            placeholder='Complete Address'
-                            value={userSignup.address}
-                            onChange={(e) => setUserSignup({ ...userSignup, address: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* Landmark (optional) */}
-                        <input
-                            type="text"
-                            placeholder='Landmark (optional)'
-                            value={userSignup.landmark}
-                            onChange={(e) => setUserSignup({ ...userSignup, landmark: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* Pincode */}
-                        <input
-                            type="text"
-                            placeholder='Pincode'
-                            value={userSignup.pincode}
-                            onChange={(e) => setUserSignup({ ...userSignup, pincode: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* City */}
-                        <input
-                            type="text"
-                            placeholder='City'
-                            value={userSignup.city}
-                            onChange={(e) => setUserSignup({ ...userSignup, city: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* State */}
-                        <input
-                            type="text"
-                            placeholder='State'
-                            value={userSignup.state}
-                            onChange={(e) => setUserSignup({ ...userSignup, state: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-
-                        {/* Country */}
-                        <input
-                            type="text"
-                            placeholder='Country'
-                            value={userSignup.country}
-                            onChange={(e) => setUserSignup({ ...userSignup, country: e.target.value })}
-                            className='bg-fafafa border border-black px-2 py-2 w-full rounded-md outline-none placeholder-gray-500'
-                        />
-                    </div>
-
-                    {/* Signup Button */}
-                    <div className="mt-2 mb-5">
-                        <button
-                            type='button'
-                            onClick={userSignupFunction}
-                            className='bg-black hover:bg-blue-600 w-full text-white text-center py-2 font-bold rounded-md transition duration-300'
-                        >
-                            {loading ? (<div className="flex items-center justify-center">
-                                <NewLoader className='' />
-                            </div>
-                            ) : 'Signup'}
-                        </button>
-                    </div>
-
-                    <div className='text-center'>
-                        <h2 className='text-black'>Have an account? <Link className='text-blue-500 font-bold' to={'/login'}>Login</Link></h2>
-                    </div>
+                    <button
+                        onClick={userSignupFunction}
+                        className='bg-gray-900 hover:bg-black w-full text-white text-center py-2 font-bold rounded-md transition duration-300'
+                        disabled = {loading}
+                    >
+                        {loading ? 'Signing Up .....' : 'Signup'}
+                    </button>
                 </div>
+
+                {isModalOpen && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                            <h2 className="text-lg font-bold mb-4">Enter Verification Code</h2>
+                            <input
+                                type="text"
+                                placeholder="Verification Code"
+                                value={userInputCode}
+                                onChange={(e) => setUserInputCode(e.target.value)}
+                                className="w-full border px-3 py-2 rounded-md mb-4"
+                            />
+                            <div className="flex justify-end">
+                                <button
+                                    className="px-4 py-2 bg-gray-200 rounded-md mr-2"
+                                    onClick={() => setIsModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-md"
+                                    onClick={handleVerifyCode}
+                                >
+                                    Verify
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </Layout>
     );
-}
+};
 
 export default Signup;

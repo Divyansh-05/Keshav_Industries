@@ -2,22 +2,15 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import myContext from "../../context/myContext";
 import toast from "react-hot-toast";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, fireDB } from "../../firebase/FirebaseConfig";
-import Loader from "../../components/loader/Loader";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
 import Layout from '../../components/layout/Layout';
 import NewLoader from "../../components/loader/NewLoader";
-
+import axios from "axios";
+import { BASE_URL } from "../../helper";
 const UserLogin = () => {
     const context = useContext(myContext);
     const { loading, setLoading } = context;
     const [buttonloading, setButtonLoading] = useState(false);
-
-
-
     const navigate = useNavigate();
-
     const [userLogin, setUserLogin] = useState({
         email: "",
         password: ""
@@ -33,33 +26,36 @@ const UserLogin = () => {
 
         setLoading(true);
         try {
-            const users = await signInWithEmailAndPassword(auth, userLogin.email, userLogin.password);
-            
-
-            const q = query(
-                collection(fireDB, "user"),
-                where('uid', '==', users?.user?.uid)
-            );
-            const unsubscribe = onSnapshot(q, (QuerySnapshot) => {
-                let user;
-                QuerySnapshot.forEach((doc) => user = doc.data());
-                localStorage.setItem("users", JSON.stringify({uid: user.uid, role:user.role, name:user.name, email:user.email, date:user.date}));
-                setUserLogin({ email: "", password: "" });
-                toast.success("Login Successfully");
-                setLoading(false);
-                setButtonLoading(false);
-                if (user.role === "admin") {
-                    navigate('/admin-dashboard');
-                } else {
-                    navigate('/user-dashboard');
-                }
+            const response = await axios.post(`${BASE_URL}/user/loginUser`, {
+                email: userLogin.email,
+                password: userLogin.password,
             });
-            return () => unsubscribe();
-        } catch (error) {
-            console.log(error);
+            const { token, user } = response.data;
+
+            // Store token and user details in localStorage
+            localStorage.setItem("authToken", token);
+            localStorage.setItem("user", JSON.stringify(user));
+
+            setUserLogin({ email: "", password: "" });
+            toast.success("Login Successful");
+
             setLoading(false);
             setButtonLoading(false);
-            toast.error("Login Failed");
+
+            // Navigate based on user role
+            if (user.role === "admin") {
+                navigate('/admin-dashboard');
+            } else {
+                navigate('/user-dashboard');
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            setLoading(false);
+            setButtonLoading(false);
+
+            // Show error message
+            const errorMessage = error.response?.data?.error || "Login failed";
+            toast.error(errorMessage);
         }
     };
 

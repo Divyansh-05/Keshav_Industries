@@ -10,7 +10,7 @@ export const cartSlice = createSlice({
     initialState,
     reducers: {
         addToCart(state, action) {
-            const user = JSON.parse(localStorage.getItem('users'))
+            const user = JSON.parse(localStorage.getItem('user'))
             if (user?.role === "user") {
                 state.push(action.payload)
                 toast.success("Added to Cart Successfully");

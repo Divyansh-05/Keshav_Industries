@@ -17,48 +17,53 @@ import BuyNowPopup from "../../components/buyNowModal/BuyNowPopup";
 import { fireDB } from "../../firebase/FirebaseConfig";
 import { collection } from "firebase/firestore";
 import { query, where, getDocs } from 'firebase/firestore';
-
-
+import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../../helper";
+import axios from "axios";
 const CartPage = () => {
     const cartItems = useSelector((state) => state.cart);
+    const navigate = useNavigate();
     // console.log(cartItems)
     const dispatch = useDispatch();
     const [isPopupOpen, setPopupOpen] = useState(false);
-    const user = JSON.parse(localStorage.getItem('users'));
+    const [loading, setLoading] = useState(false);
+    const user = JSON.parse(localStorage.getItem('user'));
     // console.log(user);
     const [userObject, setUserObject] = useState();
-  
-    const fetchDocumentByUIDField = async (uid) => {
+
+    const fetchUserData = async () => {
         try {
-            // Reference to the collection
-            const collectionRef = collection(fireDB, "user"); // Replace 'user' with your collection name
-
-            // Query to find the document where the 'uid' field matches the provided value
-            const q = query(collectionRef, where("uid", "==", uid));
-
-            // Execute the query
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                querySnapshot.forEach((doc) => {
-                    // console.log("Document ID:", doc.id);
-                    // console.log("Document data:", doc.data());
-                    setUserObject({ id: doc.id, ...doc.data() });
-                });
-                // console.log(userObject)
-            } else {
-                console.log("No document matches the provided UID field.");
+            // Get token from localStorage
+            const token = localStorage.getItem("authToken");
+            if (!token) {
+                console.error("No token found. Redirecting to login...");
+                toast.error("No token found. Redirecting to login...")
+                navigate("/userlogin");
+                return;
             }
+
+            // Make a request to fetch user data using the token
+            const response = await axios.get(`${BASE_URL}/user/getUser`, {
+                headers: {
+                    Authorization: `Bearer ${token}`, // Pass token in headers
+                },
+            });
+            setUserObject(response.data.userData); // Set the user data from the response
         } catch (error) {
-            console.error("Error fetching document by UID field:", error);
+            console.error("Error fetching user data:", error);
+            toast.error(error);
+            navigate("/userlogin"); // Redirect to login on error
+        } finally {
+            setLoading(false); // Stop the loader
         }
     };
-    fetchDocumentByUIDField(user.uid);
 
+    useEffect(() => {
+        fetchUserData();
+    }, []);
 
-    // fetchDocumentByUIDField(user.uid);
-    // setFormData(userObject)
-    
+    // console.log(userObject)
+
 
     const handleBuyNowClick = async () => {
         if (cartItems.length == 0) {
@@ -264,7 +269,7 @@ const CartPage = () => {
                                         >
                                             Buy now
                                         </Button>
-                                        <BuyNowPopup isOpen={isPopupOpen} onClose={closePopup} amount={cartTotal} cartItems={cartItems} userObject = {user}/>
+                                        <BuyNowPopup isOpen={isPopupOpen} onClose={closePopup} amount={cartTotal} cartItems={cartItems} userObject={userObject} />
                                     </div>
                                     <div className="justify-center items-center flex">
                                         <Link className="text-center jusitfy-center mx-auto items-center" to={`/returns`}>Refund Policy</Link>

@@ -17,14 +17,14 @@ const Navbar = () => {
     };
 
     // get user from localStorage 
-    const user = JSON.parse(localStorage.getItem('users'));
+    const user = JSON.parse(localStorage.getItem('user'));
 
     // navigate 
     const navigate = useNavigate();
 
     // logout function 
     const logout = () => {
-        localStorage.clear('users');
+        localStorage.clear('user');
         navigate("/login");
     }
 

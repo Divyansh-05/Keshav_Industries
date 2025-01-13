@@ -13,6 +13,8 @@ const Contacts = () => {
     hidden: { opacity: 0, y: 50 },
     visible: { opacity: 1, y: 0 },
   };
+
+
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -22,6 +24,18 @@ const Contacts = () => {
     phone: '',
     message: ''
   });
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$/;
+    return emailRegex.test(email);
+  };
+
+  const validateMobile = (mobile) => {
+    const mobileRegex = /^\d{10}$/;
+    return mobileRegex.test(mobile);
+  };
+
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,7 +48,19 @@ const Contacts = () => {
   const handleSubmit = async (e) => {
     setLoading(true);
     e.preventDefault(); // Prevent any default action
+
     if (isFormValid()) {
+      if (!validateEmail(formData.email)) {
+        toast.error("Invalid email address. Please use @gmail.com, @yahoo.com, or @outlook.com domains.");
+        setLoading(false);
+        return;
+      }
+
+      if (!validateMobile(formData.phone)) {
+        toast.error("Mobile number must be exactly 10 digits.");
+        setLoading(false);
+        return;
+      }
       const messageRef = collection(fireDB, 'Messages');
       try {
         await addDoc(messageRef, {
@@ -43,7 +69,7 @@ const Contacts = () => {
           email: formData.email,
           phone: formData.phone,
           message: formData.message,
-          time : Timestamp.now(),
+          time: Timestamp.now(),
         }
         )
         toast.success("message sent successfully!")
@@ -53,7 +79,7 @@ const Contacts = () => {
           lastName: '',
           email: '',
           phone: '',
-          message: ''      
+          message: ''
         })
 
       } catch (error) {
@@ -154,7 +180,7 @@ const Contacts = () => {
                 disabled={!isFormValid()}
 
               >
-                {loading ? <NewLoader /> : 'Submit'}
+                {loading ? 'Submitting....' : 'Submit'}
               </button>
             </form>
           </motion.div>

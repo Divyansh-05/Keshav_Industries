@@ -26,15 +26,17 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const validateEmail = (email) => /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$/.test(email);
+  const validateMobile = (mobile) => /^\d{10}$/.test(mobile);
   const [formData, setFormData] = useState({
-    name: userObject.name || '',
-    email: userObject.email || '',
-    phone: userObject.mobile || '',
-    addressLane: userObject.address || '',
-    city: userObject.city || '',
-    state: userObject.state || '',
-    country: userObject.country || '',
-    pincode: userObject.pincode || '',
+    name: userObject?.name || '',
+    email: userObject?.email || '',
+    phone: userObject?.mobile || '',
+    addressLane: '',
+    city: '',
+    state: '',
+    country:  '',
+    pincode: '',
   });
 
   // console.log(userObject)
@@ -92,16 +94,18 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
 
     const updatedFormData = {
       ...formData,
-      addressLane: formData.addressLane.trim() || userObject.address,
-      city: formData.city.trim() || userObject.city,
-      state: formData.state.trim() || userObject.state,
-      country: formData.country.trim() || userObject.country,
-      pincode: formData.pincode.trim() || userObject.pincode,
+      addressLane: formData.addressLane.trim() ,
+      city: formData.city.trim(),
+      state: formData.state.trim(),
+      country: formData.country.trim(),
+      pincode: formData.pincode.trim(),
     };
 
     if (isFormValid()) {
+      // console.log(updatedFormData.email);
       createRazorpayOrder(amount, updatedFormData);
     }
+
     else {
       toast.error("Error in creating order");
       setLoading(false);
@@ -163,7 +167,7 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
       handler: async function (response) {
         try {
           const paymentRef = collection(fireDB, 'payments');
-          const userRef = doc(fireDB, 'user', userObject.id);
+          const userRef = doc(fireDB, 'users', userObject.id);
           const currentTime = Timestamp.now();
 
 
@@ -171,7 +175,8 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
             Orders: arrayUnion({
               orderId: response.razorpay_order_id,
               PaymentID: response.razorpay_payment_id,
-              Total:amount,
+
+              Total:amount/100,
               Time: currentTime,
               Status: 'Pending',
             }),
@@ -218,36 +223,17 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
       <div className="bg-customBlue p-6 rounded-lg shadow-lg bg-opacity-85 w-full max-w-2xl">
         <h2 className="text-2xl font-bold mb-4 items-center text-center text-white">Enter Your Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            name="name"
-            placeholder={userObject.name}
-            value={formData.name}
-            onChange={handleChange}
-            className="border p-2 w-full text-black"
-            required
-            defaultValue={userObject.name}
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder={userObject.email}
-            value={formData.email}
-            onChange={handleChange}
-            className="border p-2 w-full text-black"
-            required
-            defaultValue={userObject.email}
-          />
-          <input
+          
+          {/* <input
             type="tel"
             name="phone"
-            placeholder={'Phone Number'}
+            placeholder={userObject.mobile}
             value={formData.phone}
             onChange={handleChange}
             className="border p-2 w-full text-black"
             required
             defaultValue={userObject.mobile}
-          />
+          /> */}
           <input
             type="text"
             name="addressLane"
@@ -256,7 +242,6 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
             onChange={handleChange}
             className="border p-2 w-full text-black"
             required
-            defaultValue={userObject.address}
           />
           <input
             type="text"
@@ -266,8 +251,6 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
             onChange={handleChange}
             className="border p-2 w-full text-black"
             required
-            defaultValue={userObject.city}
-
           />
           <input
             type="text"
@@ -277,7 +260,6 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
             onChange={handleChange}
             className="border p-2 w-full text-black"
             required
-            defaultValue={userObject.state}
           />
           <input
             type="text"
@@ -287,8 +269,6 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
             onChange={handleChange}
             className="border p-2 w-full text-black"
             required
-            defaultValue={userObject.country}
-
           />
           <input
             type="text"
@@ -298,7 +278,6 @@ const BuyNowPopup = ({ isOpen, onClose, amount, cartItems, userObject }) => {
             onChange={handleChange}
             className="border p-2 w-full text-black"
             required
-            defaultValue={userObject.pincode}
           />
         </div>
         <div className="flex justify-between mt-4">

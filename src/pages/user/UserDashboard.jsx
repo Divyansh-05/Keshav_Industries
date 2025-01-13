@@ -3,53 +3,69 @@ import Layout from "../../components/layout/Layout";
 import myContext from "../../context/myContext";
 import Loader from "../../components/loader/Loader";
 import { useNavigate } from "react-router-dom";
-import { fireDB } from "../../firebase/FirebaseConfig";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import { Button } from "@material-tailwind/react";
 import user_logo from "/img/User_Logo.png";
 import { motion } from "framer-motion";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { BASE_URL } from "../../helper";
 
 const UserDashboard = () => {
-  const user = JSON.parse(localStorage.getItem("users"));
   const navigate = useNavigate();
   const [userObject, setUserObject] = useState();
   const [loading, setLoading] = useState(true); // Set loading to true initially
 
   const formatDateTime = (timestamp) => {
-    if (!timestamp) return "N/A";
-    return timestamp.toDate().toLocaleString();
+    if (!timestamp) return "N/A"; // Handle null/undefined timestamp
+    
+    // If it's a Firestore Timestamp object (contains _seconds and _nanoseconds)
+    if (timestamp._seconds) {
+      const date = new Date(timestamp._seconds * 1000); // Convert seconds to milliseconds
+      return date.toLocaleString(); // Format the date as a local string
+    }
+  
+    // If it's already a JavaScript Date object or string, handle accordingly
+    if (timestamp instanceof Date) {
+      return timestamp.toLocaleString(); // If it's a native Date object
+    }
+  
+    // Handle other unexpected formats or string timestamps
+    return "Invalid Timestamp";
   };
-
+  
   useEffect(() => {
-    const fetchDocumentByUIDField = async (uid) => {
+    const fetchUserData = async () => {
       try {
-        const collectionRef = collection(fireDB, "user");
-        const q = query(collectionRef, where("uid", "==", uid));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          querySnapshot.forEach((doc) => {
-            setUserObject({ id: doc.id, ...doc.data() });
-          });
-        } else {
-          console.log("No document matches the provided UID field.");
+        // Get token from localStorage
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          console.error("No token found. Redirecting to login...");
+          toast.error("No token found. Redirecting to login...")
+          navigate("/userlogin");
+          return;
         }
+
+        // Make a request to fetch user data using the token
+        const response = await axios.get(`${BASE_URL}/user/getUser`, {
+          headers: {
+            Authorization: `Bearer ${token}`, // Pass token in headers
+          },
+        });
+
+        setUserObject(response.data.userData); // Set the user data from the response
       } catch (error) {
-        console.error("Error fetching document by UID field:", error);
+        console.error("Error fetching user data:", error);
+        navigate("/userlogin"); // Redirect to login on error
       } finally {
-        setLoading(false); // Stop the loader after fetching is complete
+        setLoading(false); // Stop the loader
       }
     };
-
-    if (user?.uid) {
-      fetchDocumentByUIDField(user.uid);
-    } else {
-      setLoading(false); // If no user, stop the loader
-    }
-  }, [user?.uid]);
+    fetchUserData();
+  }, [navigate]);
 
   const userLogout = () => {
-    localStorage.removeItem("users");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
     navigate("/");
   };
 
@@ -98,12 +114,6 @@ const UserDashboard = () => {
                 <span className="font-bold">Phone : </span>
                 {userObject?.mobile}
               </h1>
-              <h1 className="text-sm">
-                <span className="font-bold">Address : </span>
-                {userObject?.address} {userObject?.landmark} {userObject?.city}{" "}
-                {userObject?.state} {userObject?.country} {userObject?.pincode}
-              </h1>
-
               <Button onClick={userLogout} className="mt-4">
                 Logout
               </Button>
@@ -181,15 +191,15 @@ const UserDashboard = () => {
                             {orderId}
                           </td>
                           <td className="h-12 px-6 text-sm text-slate-500 border-b border-black text-center">
-                            {Time.toDate().toLocaleString()}
+                            {formatDateTime(Time)}
                           </td>
                           <td className="h-12 px-6 text-sm text-slate-500 border-b border-black text-center">
                             <span
                               className={`px-3 py-1 rounded-lg ${Status.toLowerCase() === "pending"
-                                  ? "bg-red-200 text-red-600"
-                                  : Status.toLowerCase() === "inprogress"
-                                    ? "bg-yellow-200 text-yellow-900"
-                                    : "bg-green-200 text-green-600"
+                                ? "bg-red-200 text-red-600"
+                                : Status.toLowerCase() === "inprogress"
+                                  ? "bg-yellow-200 text-yellow-900"
+                                  : "bg-green-200 text-green-600"
                                 }`}
                             >
                               {Status.charAt(0).toUpperCase() + Status.slice(1)}

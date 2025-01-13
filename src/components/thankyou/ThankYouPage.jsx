@@ -37,7 +37,7 @@ const ThankYouPage = () => {
           </button>
         </div>
         <div className="flex-2 px-4">
-          <video src={thankyouimg} autoPlay loop className="w-96 object-cover"></video>
+          <video src='../img/thank-you-gif-2.mp4' autoPlay loop className="w-96 object-cover"></video>
         </div>
         <div className="flex-1"></div>
       </div>

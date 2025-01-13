@@ -42,6 +42,16 @@ const Carrer = () => {
     setFile(e.target.files[0]); // Set the selected file
   };
 
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com|outlook\.com)$/;
+    return emailRegex.test(email);
+  };
+
+  const validateMobile = (mobile) => {
+    const mobileRegex = /^\d{10}$/;
+    return mobileRegex.test(mobile);
+  };
+
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -93,7 +103,19 @@ const Carrer = () => {
     setLoading(true);
     e.preventDefault(); // Prevent any default action
     if (isFormValid()) {
+      if (!validateEmail(formData.email)) {
+        toast.error("Invalid email address. Please use @gmail.com, @yahoo.com, or @outlook.com domains.");
+        setLoading(false);
+        return;
+      }
+
+      if (!validateMobile(formData.phone)) {
+        toast.error("Mobile number must be exactly 10 digits.");
+        setLoading(false);
+        return;
+      }
       const fileUrl = await uploadFileToCloudinary(); // Upload file to Cloudinary
+
       if (!fileUrl) {
         setLoading(false);
         return;
@@ -216,7 +238,7 @@ const Carrer = () => {
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               ></textarea>
-               <input
+              <input
                 type="file"
                 accept=".pdf,.doc,.docx"
                 onChange={handleFileChange}

@@ -2,7 +2,7 @@
 import { Navigate } from "react-router"
 
 export const ProtectedRouteForAdmin = ({children}) => {
-    const user = JSON.parse(localStorage.getItem('users'))
+    const user = JSON.parse(localStorage.getItem('user'))
     if (user?.role === "admin") {
       return children
     }
