@@ -75,11 +75,11 @@ const Signup = () => {
         /*
         try {
             setLoading(true);
-            await emailjs.send("service_nxpm74r", "template_6paeh9u", {
+            await emailjs.send("service_ye3dx4n", "template_dlzvvfq", {
                 to_name: name,
                 to_email: email,
                 message: code,
-            }, "AX5QPEWUDd7UZrPe9");
+            }, "kXlqQY1TCYSrxQwwC");
 
             toast.success("Verification code sent to your email.");
             setIsModalOpen(true);
